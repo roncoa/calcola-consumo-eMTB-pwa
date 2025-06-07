@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>eBike battery tool</title>
+  <title>eBike Estimator</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#27ae60" />
   <link rel="icon" href="icon.png" />
@@ -68,6 +68,11 @@
   <label for="battery">🔋 Capacità batteria (Wh):</label>
   <input type="number" id="battery" value="500" min="250" max="1000" step="50" />
 
+  <label>
+    <input type="checkbox" id="downhillUse" />
+    Considera leggero consumo anche in discesa tecnica (1 Wh/km)
+  </label>
+
   <button onclick="analyze()">🚴 Calcola Consumo</button>
 
   <div id="results" style="display:none;">
@@ -92,6 +97,8 @@
       const points = xmlDoc.getElementsByTagName("trkpt");
       let totalDist = 0;
       let totalAsc = 0;
+      let uphillDist = 0;
+      let downhillDist = 0;
       let elevations = [];
       let prevLat = null, prevLon = null, prevEle = null;
 
@@ -103,10 +110,15 @@
 
         if (prevLat !== null) {
           const d = haversine(lat, lon, prevLat, prevLon);
-          totalDist += d;
+          const elevDiff = ele - prevEle;
 
-          const climb = ele - prevEle;
-          if (climb > 0) totalAsc += climb;
+          totalDist += d;
+          if (elevDiff > 0) {
+            totalAsc += elevDiff;
+            uphillDist += d;
+          } else {
+            downhillDist += d;
+          }
         }
 
         prevLat = lat;
@@ -114,7 +126,13 @@
         prevEle = ele;
       }
 
-      return { distance: totalDist, ascent: totalAsc, elevationProfile: elevations };
+      return {
+        distance: totalDist,
+        ascent: totalAsc,
+        uphillDist,
+        downhillDist,
+        elevationProfile: elevations
+      };
     }
 
     function haversine(lat1, lon1, lat2, lon2) {
@@ -137,19 +155,29 @@
         const result = parseGPX(xml);
         const level = document.getElementById("assist").value;
         const battery = parseFloat(document.getElementById("battery").value);
+        const includeDownhill = document.getElementById("downhillUse").checked;
 
         const [wpkm, wp100m] = assistProfiles[level];
-        const whDist = result.distance * wpkm;
+        const whUphill = result.uphillDist * wpkm;
         const whClimb = (result.ascent / 100) * wp100m;
-        const totalWh = whDist + whClimb;
+
+        let whDownhill = 0;
+        if (includeDownhill) {
+          whDownhill = result.downhillDist * 1; // 1 Wh/km stimato
+        }
+
+        const totalWh = whUphill + whClimb + whDownhill;
         const perc = (totalWh / battery) * 100;
 
         const out = `
-          Distanza: <strong>${result.distance.toFixed(2)} km</strong><br>
+          Distanza totale: <strong>${result.distance.toFixed(2)} km</strong><br>
           Dislivello positivo: <strong>${result.ascent.toFixed(0)} m</strong><br>
-          Consumo stimato: <strong>${totalWh.toFixed(0)} Wh</strong><br>
-          % batteria usata: <strong>${perc.toFixed(1)}%</strong>
+          Consumo salita (km): ${whUphill.toFixed(0)} Wh<br>
+          Consumo salita (D+): ${whClimb.toFixed(0)} Wh<br>
+          ${includeDownhill ? `Consumo discesa tecnica: ${whDownhill.toFixed(0)} Wh<br>` : ""}
+          <strong>Totale stimato: ${totalWh.toFixed(0)} Wh (${perc.toFixed(1)}%)</strong>
         `;
+
         document.getElementById("outputText").innerHTML = out;
         document.getElementById("results").style.display = "block";
 
