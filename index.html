@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stima Consumo eBike</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#27ae60" />
+  <link rel="icon" href="icon.png" />
+  <script>
+    // Registra il Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js');
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* ...stili già presenti... */
+  </style>
+</head>
+<body>
+  <h1>🔋 Stima Consumo eBike</h1>
+
+  <input type="file" id="gpxInput" accept=".gpx" />
+
+  <label for="assist">⚙️ Livello assistenza:</label>
+  <select id="assist">
+    <option value="Eco">Eco</option>
+    <option value="Tour">Tour</option>
+    <option value="eMTB">eMTB</option>
+    <option value="Turbo">Turbo</option>
+  </select>
+
+  <label for="battery">🔋 Capacità batteria (Wh):</label>
+  <input type="number" id="battery" value="500" min="250" max="1000" step="50" />
+
+  <button onclick="analyze()">🚴 Calcola Consumo</button>
+
+  <div id="results" style="display:none;">
+    <h3>📊 Risultati</h3>
+    <p id="outputText"></p>
+    <canvas id="altChart"></canvas>
+  </div>
+
+  <script>
+    const assistProfiles = {
+      Eco: [3.5, 5],
+      Tour: [5, 7],
+      eMTB: [6, 9],
+      Turbo: [8, 12]
+    };
+
+    let chart;
+
+    function parseGPX(xml) {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xml, "text/xml");
+      const points = xmlDoc.getElementsByTagName("trkpt");
+      let totalDist = 0;
+      let totalAsc = 0;
+      let elevations = [];
+      let prevLat = null, prevLon = null, prevEle = null;
+
+      for (let i = 0; i < points.length; i++) {
+        const lat = parseFloat(points[i].getAttribute("lat"));
+        const lon = parseFloat(points[i].getAttribute("lon"));
+        const ele = parseFloat(points[i].getElementsByTagName("ele")[0].textContent);
+        elevations.push(ele);
+
+        if (prevLat !== null) {
+          const d = haversine(lat, lon, prevLat, prevLon);
+          totalDist += d;
+
+          const climb = ele - prevEle;
+          if (climb > 0) totalAsc += climb;
+        }
+
+        prevLat = lat;
+        prevLon = lon;
+        prevEle = ele;
+      }
+
+      return { distance: totalDist, ascent: totalAsc, elevationProfile: elevations };
+    }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function analyze() {
+      const file = document.getElementById("gpxInput").files[0];
+      if (!file) return alert("📂 Carica un file GPX.");
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const xml = e.target.result;
+        const result = parseGPX(xml);
+        const level = document.getElementById("assist").value;
+        const battery = parseFloat(document.getElementById("battery").value);
+
+        const [wpkm, wp100m] = assistProfiles[level];
+        const whDist = result.distance * wpkm;
+        const whClimb = (result.ascent / 100) * wp100m;
+        const totalWh = whDist + whClimb;
+        const perc = (totalWh / battery) * 100;
+
+        const out = `
+          Distanza: <strong>${result.distance.toFixed(2)} km</strong><br>
+          Dislivello positivo: <strong>${result.ascent.toFixed(0)} m</strong><br>
+          Consumo stimato: <strong>${totalWh.toFixed(0)} Wh</strong><br>
+          % batteria usata: <strong>${perc.toFixed(1)}%</strong>
+        `;
+        document.getElementById("outputText").innerHTML = out;
+        document.getElementById("results").style.display = "block";
+
+        drawChart(result.elevationProfile);
+      };
+      reader.readAsText(file);
+    }
+
+    function drawChart(data) {
+      const ctx = document.getElementById("altChart").getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.map((_, i) => i),
+          datasets: [{
+            label: 'Altitudine (m)',
+            data: data,
+            fill: false,
+            borderColor: 'green',
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              display: false
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Altitudine (m)'
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.parsed.y} m`
+              }
+            },
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
