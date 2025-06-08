@@ -1,5 +1,5 @@
 {
-  "name": "eBike Estimator",
+  "name": "Calcola consumo eBike",
   "short_name": "eBike",
   "start_url": "./index.html",
   "display": "standalone",

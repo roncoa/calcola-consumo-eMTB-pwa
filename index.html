@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>eBike Estimator</title>
+  <title>Calcola consumo eBike</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#27ae60" />
   <link rel="icon" href="icon.png" />
@@ -53,25 +53,30 @@
   </style>
 </head>
 <body>
-  <h1>🔋 eBike Estimator</h1>
+  <h1>🔋 Calcola consumo eBike</h1>
 
   <input type="file" id="gpxInput" accept=".gpx" />
-
-  <label for="assist">⚙️ Livello assistenza:</label>
-  <select id="assist">
-    <option value="Eco">Eco</option>
-    <option value="Tour">Tour</option>
-    <option value="eMTB">eMTB</option>
-    <option value="Turbo">Turbo</option>
-  </select>
 
   <label for="battery">🔋 Capacità batteria (Wh):</label>
   <input type="number" id="battery" value="500" min="250" max="1000" step="50" />
 
+  <label for="assist">⚙️ Seleziona profilo assistenza:</label>
+  <select id="assist"></select>
+
   <label>
-    <input type="checkbox" id="downhillUse" />
-    Considera leggero consumo anche in discesa tecnica (1 Wh/km)
+    <input type="checkbox" id="downhillUse" onchange="toggleDownhillInput()" />
+    Considera consumo in discesa tecnica
   </label>
+  <input type="number" id="downhillRate" value="1.0" step="0.1" min="0" max="10" style="display:none;" />
+
+  <details style="margin-top: 20px;">
+    <summary>🔧 Opzioni avanzate</summary>
+    <div id="profiles" style="margin-top: 10px;">
+      <h4>Profili assistenza:</h4>
+      <div id="profileList"></div>
+      <button onclick="addProfile()">➕ Aggiungi profilo</button>
+    </div>
+  </details>
 
   <button onclick="analyze()">🚴 Calcola Consumo</button>
 
@@ -82,14 +87,69 @@
   </div>
 
   <script>
-    const assistProfiles = {
-      Eco: [3.5, 5],
-      Tour: [5, 7],
-      eMTB: [6, 9],
-      Turbo: [8, 12]
-    };
-
     let chart;
+    let profiles = {};
+
+    function initProfiles() {
+      profiles = {
+        Eco: [3.5, 5],
+        Tour: [5, 7],
+        eMTB: [6, 9],
+        Turbo: [8, 12]
+      };
+    }
+
+    function refreshProfileSelect() {
+      const select = document.getElementById("assist");
+      select.innerHTML = "";
+      for (let name in profiles) {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+      }
+    }
+
+    function renderProfileList() {
+      const container = document.getElementById("profileList");
+      container.innerHTML = "";
+      for (let name in profiles) {
+        const [whkm, whdplus] = profiles[name];
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <label>${name} – 
+            <input type="number" value="${whkm}" step="0.1" style="width:60px" onchange="updateProfile('${name}', 0, this.value)"> Wh/km, 
+            <input type="number" value="${whdplus}" step="0.1" style="width:60px" onchange="updateProfile('${name}', 1, this.value)"> Wh/100m
+            <button onclick="removeProfile('${name}')">❌</button>
+          </label>
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    function updateProfile(name, index, value) {
+      profiles[name][index] = parseFloat(value);
+    }
+
+    function removeProfile(name) {
+      delete profiles[name];
+      refreshProfileSelect();
+      renderProfileList();
+    }
+
+    function addProfile() {
+      const name = prompt("Nome nuovo profilo:");
+      if (!name || profiles[name]) return;
+      profiles[name] = [5, 7];
+      refreshProfileSelect();
+      renderProfileList();
+    }
+
+    function toggleDownhillInput() {
+      const checkbox = document.getElementById("downhillUse");
+      const input = document.getElementById("downhillRate");
+      input.style.display = checkbox.checked ? "block" : "none";
+    }
 
     function parseGPX(xml) {
       const parser = new DOMParser();
@@ -154,16 +214,21 @@
         const xml = e.target.result;
         const result = parseGPX(xml);
         const level = document.getElementById("assist").value;
+		if (!level || !profiles[level]) {
+			alert("⚠️ Seleziona un profilo assistenza valido.");
+			return;
+		}
         const battery = parseFloat(document.getElementById("battery").value);
         const includeDownhill = document.getElementById("downhillUse").checked;
 
-        const [wpkm, wp100m] = assistProfiles[level];
+        const [wpkm, wp100m] = profiles[level];
         const whUphill = result.uphillDist * wpkm;
         const whClimb = (result.ascent / 100) * wp100m;
 
         let whDownhill = 0;
         if (includeDownhill) {
-          whDownhill = result.downhillDist * 1; // 1 Wh/km stimato
+          const downhillRate = parseFloat(document.getElementById("downhillRate").value) || 0;
+          whDownhill = result.downhillDist * downhillRate;
         }
 
         const totalWh = whUphill + whClimb + whDownhill;
@@ -223,6 +288,13 @@
         }
       });
     }
+
+    // ✅ Inizializza profili all'avvio
+    window.onload = () => {
+      initProfiles();
+      refreshProfileSelect();
+      renderProfileList();
+    };
   </script>
 </body>
 </html>
