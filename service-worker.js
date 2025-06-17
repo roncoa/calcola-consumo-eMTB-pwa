@@ -1,22 +1,29 @@
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open('ebike-cache').then((cache) => {
-      return cache.addAll([
-        './',
-        './index.html',
-        './manifest.json',
-        './icon.png',
-        './service-worker.js',
-        'https://cdn.jsdelivr.net/npm/chart.js'
-      ]);
-    })
+const CACHE_NAME = 'ebike-app-cache-v1';
+const FILES_TO_CACHE = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon.png'
+];
+
+self.addEventListener('install', (evt) => {
+  evt.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(FILES_TO_CACHE))
   );
+  self.skipWaiting();
 });
 
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((res) => {
-      return res || fetch(e.request);
-    })
+self.addEventListener('activate', (evt) => {
+  evt.waitUntil(
+    caches.keys().then((keyList) =>
+      Promise.all(keyList.map((key) => key !== CACHE_NAME && caches.delete(key)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (evt) => {
+  evt.respondWith(
+    caches.match(evt.request).then((response) => response || fetch(evt.request))
   );
 });
