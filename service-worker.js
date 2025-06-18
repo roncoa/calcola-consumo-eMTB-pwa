@@ -1,5 +1,6 @@
 const CACHE_NAME = 'emtb-app-cache-v1';
 const FILES_TO_CACHE = [
+  './chart.umd.min.js',
   './',
   './index.html',
   './manifest.json',
