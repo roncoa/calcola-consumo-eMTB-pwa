@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Calcola consumo eBike</title>
+  <title>Calcola consumo eMTB</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#27ae60" />
   <link rel="icon" href="icon.png" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="chart.umd.min.js"></script>
 
   <script>
     if (location.protocol.startsWith('http') && 'serviceWorker' in navigator) {
@@ -58,7 +58,7 @@
 </head>
 
 <body>
-  <h1>🔋 Calcola consumo eBike</h1>
+  <h1>🔋 Calcola consumo eMTB</h1>
 
   <div class="form-row">
     <label for="gpxInput">📂 Scegli file GPX:</label>
@@ -366,11 +366,11 @@ function drawChart(elev, xLabels) {
         elevThreshold: parseFloat(document.getElementById("elevThreshold").value),
         smoothingWindow: parseInt(document.getElementById("smoothingWindow").value),
       };
-      localStorage.setItem("ebikeParams", JSON.stringify(params));
+      localStorage.setItem("eMTBParams", JSON.stringify(params));
     }
 
     function loadParams() {
-      const saved = JSON.parse(localStorage.getItem("ebikeParams") || "{}");
+      const saved = JSON.parse(localStorage.getItem("eMTBParams") || "{}");
       if (saved.elevThreshold) document.getElementById("elevThreshold").value = saved.elevThreshold;
       if (saved.smoothingWindow) document.getElementById("smoothingWindow").value = saved.smoothingWindow;
     }
@@ -383,7 +383,7 @@ function drawChart(elev, xLabels) {
     }
 
     function loadProfiles() {
-      const saved = localStorage.getItem("ebikeProfiles");
+      const saved = localStorage.getItem("eMTBProfiles");
       profiles = saved ? JSON.parse(saved) : profilesDEFAULT;
       updateProfileList();
     }
@@ -420,7 +420,7 @@ function drawChart(elev, xLabels) {
       const up = parseFloat(document.getElementById("upWh").value);
       if (!name || isNaN(flat) || isNaN(up)) return alert("⚠️ Inserisci tutti i campi del profilo.");
       profiles[name] = [flat, up];
-      localStorage.setItem("ebikeProfiles", JSON.stringify(profiles));
+      localStorage.setItem("eMTBProfiles", JSON.stringify(profiles));
       updateProfileList();
       document.getElementById("assist").value = name;
       closeAccordion();
@@ -431,14 +431,14 @@ function drawChart(elev, xLabels) {
       if (!name || !profiles[name]) return alert("⚠️ Nessun profilo selezionato.");
       if (!confirm(`Eliminare il profilo "${name}"?`)) return;
       delete profiles[name];
-      localStorage.setItem("ebikeProfiles", JSON.stringify(profiles));
+      localStorage.setItem("eMTBProfiles", JSON.stringify(profiles));
       updateProfileList();
     }
 
     function resetProfiles() {
       if (!confirm("Vuoi davvero cancellare tutti i profili e ripristinare quelli di default?")) return;
       profiles = profilesDEFAULT;
-      localStorage.setItem("ebikeProfiles", JSON.stringify(profiles));
+      localStorage.setItem("eMTBProfiles", JSON.stringify(profiles));
       updateProfileList();
       closeAccordion();
     }

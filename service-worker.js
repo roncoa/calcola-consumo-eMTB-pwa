@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ebike-app-cache-v1';
+const CACHE_NAME = 'emtb-app-cache-v1';
 const FILES_TO_CACHE = [
   './',
   './index.html',

@@ -1,6 +1,6 @@
 {
-  "name": "Calcola consumo eBike",
-  "short_name": "eBike",
+  "name": "Calcola consumo eMTB",
+  "short_name": "Calcola consumo eMTB",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
