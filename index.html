@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calcola consumo eMTB</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#27ae60" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Calcola consumo eMTB">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" href="icon.png" />
+  <script src="chart.umd.min.js"></script>
+
+  <script>
+    if (location.protocol.startsWith('http') && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('✅ Service worker registrato'))
+        .catch(err => console.warn('❌ Errore SW:', err));
+    }
+  </script>
+
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; background: #f9f9f9; }
+    h1 { text-align: center; color: #2c3e50; }
+    label, input, select, button { font-size: 1em; }
+    input[type="number"], select, input[type="text"] { padding: 6px; width: 100%; }
+    button { background: #27ae60; color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; }
+    canvas { margin-top: 20px; background: white; }
+    #results { background: white; padding: 15px; margin-top: 20px; border-radius: 10px; }
+    .form-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .form-row label { flex: 1 0 150px; }
+    .form-row input, .form-row select { flex: 2 0 200px; }
+    .row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .row button { flex: 1; }
+    .danger { background: #e74c3c; }
+    .accordion-header {
+      background-color: #eee;
+      cursor: pointer;
+      padding: 10px;
+      font-weight: bold;
+      border-radius: 5px;
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .accordion-header::after { content: "▼"; font-size: 0.8em; }
+    .accordion-header.open::after { content: "▲"; }
+    .accordion-content { display: none; padding-top: 10px; }
+    .accordion-content.open { display: block; }
+    #manualFields {
+      display: none;
+      margin-left: 20px;
+      margin-top: 10px;
+      padding: 10px;
+      border-left: 3px solid #27ae60;
+      background: #f0f9f3;
+    }
+  </style>
+</head>
+
+<body>
+  <noscript>
+    <p style="color:red; text-align:center;">⚠️ Per usare l'app offline, abilita JavaScript.</p>
+  </noscript>
+  <h1>🔋 Calcola consumo eMTB</h1>
+
+  <div class="form-row">
+    <label for="gpxInput">📂 Scegli file GPX:</label>
+    <input type="file" id="gpxInput" accept=".gpx" />
+  </div>
+  
+    <div class="accordion-header" onclick="toggleAccordion(this)">⚙️ Parametri avanzati filtro GPX</div>
+  <div class="accordion-content profile-block" id="advancedParams">
+    <div class="form-row">
+      <label for="elevThreshold">Soglia dislivello minimo (m)</label>
+      <input type="number" id="elevThreshold" value="0.5" step="0.1" oninput="saveParams()" />
+    </div>
+    <div class="form-row">
+      <label for="smoothingWindow">Ampiezza media mobile</label>
+      <input type="number" id="smoothingWindow" value="5" step="1" oninput="saveParams()" />
+    </div>
+    <div class="row">
+      <button onclick="resetParams()" style="background:#999;">🔄 Resetta parametri</button>
+    </div>
+  </div>
+  <br>
+
+  	<label style="display: flex; align-items: center;">
+	  <input type="checkbox" id="manualToggle" onchange="toggleManualMode()" />
+	  <span style="margin-left: 8px;">Distanza e dislivello manuali</span>
+	</label>
+	<div id="manualFields">
+		<div class="form-row">
+		  <label for="manualDist">Distanza totale (km)</label>
+		  <input type="number" id="manualDist" value="0" step="0.1" />
+		</div>
+		<div class="form-row">
+		  <label for="manualAsc">Dislivello positivo (m)</label>
+		  <input type="number" id="manualAsc" value="0" />
+		</div>
+	</div>
+
+
+  
+ <div class="form-row">
+    <label for="battery">🔋 Capacità batteria (Wh):</label>
+    <input type="number" id="battery" value="500" min="100" max="1000" step="50" />
+  </div>
+
+  <div class="form-row">
+    <label for="assist">⚙️ Seleziona profilo assistenza:</label>
+    <select id="assist" onchange="loadProfileValues()"></select>
+  </div>
+
+  <div class="accordion-header" onclick="toggleAccordion(this)">🔧 Gestione profili assistenza</div>
+  <div class="accordion-content profile-block" id="profileAccordion">
+    <div class="form-row">
+      <label for="profName">Nome profilo</label>
+      <input type="text" id="profName" placeholder="es: Eco Custom" />
+    </div>
+    <div class="form-row">
+      <label for="flatWh">Wh/km</label>
+      <input type="number" id="flatWh" step="0.1" />
+    </div>
+    <div class="form-row">
+      <label for="upWh">Wh/100m dislivello (salita)</label>
+      <input type="number" id="upWh" step="0.1" />
+    </div>
+    <div class="row">
+      <button onclick="saveProfile()">💾 Salva profilo</button>
+      <button onclick="deleteProfile()" class="danger">🗑 Elimina profilo</button>
+      <button onclick="resetProfiles()" style="background:#999;">🔄 Resetta profili</button>
+    </div>
+  </div>
+
+
+
+  <button onclick="analyze()">🚴 Calcola Consumo</button>
+
+  <div id="results" style="display:none;">
+    <h3>📊 Risultati</h3>
+    <p id="outputText"></p>
+    <canvas id="altChart" width="600" height="300"></canvas>
+  
+  <div style="text-align:center; margin-top:20px;">
+    <button onclick="shareResults()">📤 Condividi risultati</button>
+  </div>
+
+</div>
+
+  <script>
+    let chart;
+    let profiles = {};
+	const elevThresholdDEFAULT =   1;
+	const smoothingWindowDEFAULT = 5;
+	const profilesDEFAULT = {
+        Eco:   [0.3, 30],
+        Tour:  [0.5, 40],
+        eMTB:  [0.7, 50],
+        Turbo: [1,   65]
+      };
+	  
+
+    function toggleManualMode() {
+      const manual = document.getElementById("manualToggle").checked;
+      document.getElementById("manualFields").style.display = manual ? "block" : "none";
+    }
+
+
+function analyze() {
+  document.getElementById("outputText").innerHTML = "⏳ Analisi in corso...";
+  document.getElementById("results").style.display = "block";
+  document.getElementById("outputText").style.display = "block";
+  const profileName = document.getElementById("assist").value;
+  if (!profiles[profileName]) {
+  document.getElementById("outputText").style.display = "none";
+  document.getElementById("results").style.display = "none";
+  return alert("⚠️ Nessun profilo valido selezionato.");}
+
+
+  
+
+  closeAccordion();
+  saveParams();
+
+  const [whPerKm, whPer100m] = profiles[profileName];
+  const battery = parseFloat(document.getElementById("battery").value);
+  const useManual = document.getElementById("manualToggle").checked;
+  
+  <!-- PARAMETRI MANUALI  -->
+  if (useManual) {
+    const dist = parseFloat(document.getElementById("manualDist").value);
+    const asc = parseFloat(document.getElementById("manualAsc").value);
+
+    const whFlat = dist * whPerKm;
+    const whClimb = (asc / 100) * whPer100m;
+    const totalWh = whFlat + whClimb;
+    const perc = (totalWh / battery) * 100;
+	
+    document.getElementById("outputText").innerHTML = `<h3>da distanza e dislivello manuali</h3>
+        Profilo assistenza: <strong>${profileName}</strong><br>
+		Distanza: <strong>${dist.toFixed(2)} km</strong><br>
+		<br>
+		<strong>📊 Calcolo dislivello:</strong><br>
+		Positivo: <strong>${asc.toFixed(0)} m</strong><br>
+		<br>
+		<strong>📊 Calcolo consumi:</strong><br>
+		Consumo: ${whFlat.toFixed(0)} Wh<br>
+		Salita (D+): ${whClimb.toFixed(0)} Wh<br>
+		<strong>Totale: ${totalWh.toFixed(0)} Wh (${perc.toFixed(1)}%)</strong>
+    `;
+    document.getElementById("results").style.display = "block";
+    if (chart) chart.destroy();
+    return;
+  }
+
+
+
+  const file = document.getElementById("gpxInput").files[0];
+  if (!file) {
+  document.getElementById("outputText").style.display = "none";
+  document.getElementById("results").style.display = "none";
+  return alert("📂 Seleziona un file GPX.");}
+
+  const elevThreshold = parseFloat(document.getElementById("elevThreshold").value) || elevThresholdDEFAULT;
+  const smoothingWindow = parseInt(document.getElementById("smoothingWindow").value) || smoothingWindowDEFAULT;
+  <!-- const minSegmentLength = (parseFloat(document.getElementById("minDistance").value) || 2) / 1000; -->
+
+
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(e.target.result, "text/xml");
+    const trkpts = xml.getElementsByTagName("trkpt");
+
+    let dist = 0, asc = 0, desc = 0, elev = [], coords = [];
+    for (let i = 0; i < trkpts.length; i++) {
+      const lat = parseFloat(trkpts[i].getAttribute("lat"));
+      const lon = parseFloat(trkpts[i].getAttribute("lon"));
+      const ele = parseFloat(trkpts[i].getElementsByTagName("ele")[0].textContent);
+      elev.push(ele);
+      coords.push({ lat, lon });
+    }
+
+    const elevRaw = [...elev];
+        elev = smoothElevation(elev, smoothingWindow);
+
+    for (let i = 1; i < coords.length; i++) {
+      const d = haversine(coords[i - 1], coords[i]);
+      dist += d;
+      const delta = elev[i] - elev[i - 1];
+      if (delta > elevThreshold) asc += delta;
+      else if (delta < -elevThreshold) desc += Math.abs(delta);
+    }
+	
+	// Calcolo grezzo (senza filtri)
+	let ascRaw = 0, descRaw = 0;
+	for (let i = 1; i < elevRaw.length; i++) {
+	  const delta = elevRaw[i] - elevRaw[i - 1];
+	  if (delta > 0) ascRaw += delta;
+	  if (delta < 0) descRaw += Math.abs(delta);
+	}
+		
+		
+	const whFlat = dist * whPerKm;
+    const whClimb = (asc / 100) * whPer100m;
+    const totalWh = whFlat + whClimb;
+    const perc = (totalWh / battery) * 100;
+	
+	
+	document.getElementById("outputText").innerHTML = `<h3>da GPX</h3>
+		Profilo assistenza: <strong>${profileName}</strong><br>
+		Distanza: <strong>${dist.toFixed(2)} km</strong><br>
+		<br>
+		<strong>📊 Calcolo dislivello:</strong><br>
+		Positivo: <strong>${asc.toFixed(0)} m</strong> (RAW: ${ascRaw.toFixed(0)} m)<br>
+		Negativo: <strong>${desc.toFixed(0)} m</strong> (RAW: ${descRaw.toFixed(0)} m)<br>
+		<br>
+		<strong>📊 Calcolo consumi:</strong><br>
+		Consumo: ${whFlat.toFixed(0)} Wh<br>
+		Salita (D+): ${whClimb.toFixed(0)} Wh<br>
+		<strong>Totale: ${totalWh.toFixed(0)} Wh (${perc.toFixed(1)}%)</strong>
+	  
+	`;
+	
+    drawChart(elev, coords);
+	document.getElementById("results").style.display = "block";
+  };
+  reader.readAsText(file);
+
+
+}
+
+
+function drawChart(elev, coords) {
+  const ctx = document.getElementById("altChart").getContext("2d");
+  if (chart) chart.destroy();
+
+  // Crea array di distanze cumulate (in km)
+  let distances = [0];
+  for (let i = 1; i < coords.length; i++) {
+    distances[i] = distances[i - 1] + haversine(coords[i - 1], coords[i]);
+  }
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: distances,
+      datasets: [{
+        label: "Altitudine (m)",
+        data: elev,
+        borderColor: "blue",
+        borderWidth: 2,
+        fill: false,
+        tension: 0.1,
+        pointRadius: 1,
+        pointHoverRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Distanza (km)'
+          },
+          ticks: {
+            callback: function(value, index) {
+              return distances[index].toFixed(1) + ' km';
+            },
+            autoSkip: true,
+            maxTicksLimit: 20
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Altitudine (m)'
+          }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: function(tooltipItems) {
+              const i = tooltipItems[0].dataIndex;
+              return distances[i].toFixed(1) + ' km';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+
+
+    function haversine(a, b) {
+	  const toRad = deg => deg * Math.PI / 180;
+	  const R = 6371; // km
+	  const dLat = toRad(b.lat - a.lat);
+	  const dLon = toRad(b.lon - a.lon);
+	  const lat1 = toRad(a.lat);
+	  const lat2 = toRad(b.lat);
+
+	  const aVal = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+	  const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
+	  return R * c;
+	}
+
+    function toggleAccordion(header) {
+      const content = header.nextElementSibling;
+      const isOpen = content.classList.toggle("open");
+      header.classList.toggle("open", isOpen);
+    }
+
+    function closeAccordion() {
+      document.querySelectorAll(".accordion-content").forEach(e => e.classList.remove("open"));
+      document.querySelectorAll(".accordion-header").forEach(h => h.classList.remove("open"));
+    }
+
+    function smoothElevation(data, window = 5) {
+      return data.map((_, i, arr) => {
+        const start = Math.max(0, i - Math.floor(window / 2));
+        const end = Math.min(arr.length, i + Math.ceil(window / 2));
+        const slice = arr.slice(start, end);
+        return slice.reduce((sum, val) => sum + val, 0) / slice.length;
+      });
+    }
+
+    function saveParams() {
+      const params = {
+        elevThreshold: parseFloat(document.getElementById("elevThreshold").value),
+        smoothingWindow: parseInt(document.getElementById("smoothingWindow").value),
+      };
+      localStorage.setItem("eMTBParams", JSON.stringify(params));
+    }
+
+    function loadParams() {
+      const saved = JSON.parse(localStorage.getItem("eMTBParams") || "{}");
+      if (saved.elevThreshold) document.getElementById("elevThreshold").value = saved.elevThreshold;
+      if (saved.smoothingWindow) document.getElementById("smoothingWindow").value = saved.smoothingWindow;
+    }
+
+    function resetParams() {
+      document.getElementById("elevThreshold").value = elevThresholdDEFAULT;
+      document.getElementById("smoothingWindow").value = smoothingWindowDEFAULT;
+      saveParams();
+      closeAccordion();
+    }
+
+    function loadProfiles() {
+      const saved = localStorage.getItem("eMTBProfiles");
+      profiles = saved ? JSON.parse(saved) : profilesDEFAULT;
+      updateProfileList();
+    }
+
+    function updateProfileList() {
+      const select = document.getElementById("assist");
+      select.innerHTML = "";
+      const names = Object.keys(profiles);
+      if (names.length === 0) {
+        select.innerHTML = "<option value=''>Nessun profilo</option>";
+        return;
+      }
+      names.forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+      loadProfileValues();
+    }
+
+    function loadProfileValues() {
+      const name = document.getElementById("assist").value;
+      if (!name || !profiles[name]) return;
+      const [flat, up] = profiles[name];
+      document.getElementById("profName").value = name;
+      document.getElementById("flatWh").value = flat;
+      document.getElementById("upWh").value = up;
+    }
+
+    function saveProfile() {
+      const name = document.getElementById("profName").value.trim();
+      const flat = parseFloat(document.getElementById("flatWh").value);
+      const up = parseFloat(document.getElementById("upWh").value);
+      if (!name || isNaN(flat) || isNaN(up)) return alert("⚠️ Inserisci tutti i campi del profilo.");
+      profiles[name] = [flat, up];
+      localStorage.setItem("eMTBProfiles", JSON.stringify(profiles));
+      updateProfileList();
+      document.getElementById("assist").value = name;
+      closeAccordion();
+    }
+
+    function deleteProfile() {
+      const name = document.getElementById("assist").value;
+      if (!name || !profiles[name]) return alert("⚠️ Nessun profilo selezionato.");
+      if (!confirm(`Eliminare il profilo "${name}"?`)) return;
+      delete profiles[name];
+      localStorage.setItem("eMTBProfiles", JSON.stringify(profiles));
+      updateProfileList();
+    }
+
+    function resetProfiles() {
+      if (!confirm("Vuoi davvero cancellare tutti i profili e ripristinare quelli di default?")) return;
+      profiles = profilesDEFAULT;
+      localStorage.setItem("eMTBProfiles", JSON.stringify(profiles));
+      updateProfileList();
+      closeAccordion();
+    }
+
+    loadProfiles();
+
+function shareResults() {
+  if (navigator.share) {
+    navigator.share({
+      title: 'Calcola consumo eMTB',
+      text: document.getElementById("outputText").innerText,
+      url: window.location.href
+    }).catch(err => console.warn('❌ Share fallito', err));
+  } else {
+    alert("Condivisione non supportata su questo dispositivo.");
+  }
+}
+
+    loadParams();
+  document.body.ondrop = function (e) {
+    e.preventDefault();
+    document.getElementById('gpxInput').files = e.dataTransfer.files;
+  };
+  document.body.ondragover = function (e) {
+    e.preventDefault();
+  };
+
+  </script>
+</body>
+</html>
