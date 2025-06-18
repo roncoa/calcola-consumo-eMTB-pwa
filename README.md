@@ -35,7 +35,7 @@ Funziona **offline** e può essere **installata su PC, Android e iOS**.
 
 ### 🔧 Installazione locale
 
-1. Apri l'URL pubblicato ([https://roncoa.github.io/ebike-pwa/](https://roncoa.github.io/ebike-pwa/))
+1. Apri l'URL pubblicato ([roncoa.github.io/ebike-pwa/](https://roncoa.github.io/ebike-pwa/))
 2. Installa l’app dal browser (Chrome, Edge, Safari mobile)
 
 ---
