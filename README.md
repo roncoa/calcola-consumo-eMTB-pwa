@@ -1,4 +1,4 @@
-# 🔋 eMTB Consumption Calculator
+# 🔋 Calcola consumo eBike
 
 Questa Progressive Web App (PWA) consente di stimare il consumo di una e-bike (eMTB) in base a un tracciato GPX o a distanza/dislivello inseriti manualmente.  
 Funziona **offline** e può essere **installata su PC, Android e iOS**.
@@ -35,10 +35,8 @@ Funziona **offline** e può essere **installata su PC, Android e iOS**.
 
 ### 🔧 Hosting locale (es. GitHub Pages)
 
-1. Clona o carica questi file in una nuova repo GitHub
-2. Abilita GitHub Pages dalle impostazioni del repository
-3. Apri l'URL pubblicato (es. `https://tuo-nome.github.io/nome-repo`)
-4. Installa l’app dal browser (Chrome, Edge, Safari mobile)
+1. Apri l'URL pubblicato ([https://roncoa.github.io/ebike-pwa/](https://roncoa.github.io/ebike-pwa/))
+2. Installa l’app dal browser (Chrome, Edge, Safari mobile)
 
 ---
 
@@ -53,8 +51,6 @@ Funziona **offline** e può essere **installata su PC, Android e iOS**.
 ## ⚠️ Requisiti
 
 - **JavaScript abilitato**
-- Chart.js (`chart.umd.min.js`) deve essere salvato localmente
-  - Scaricalo da [qui](https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js)
 
 ---
 
@@ -76,5 +72,4 @@ Puoi modificarlo liberamente e adattarlo alle tue esigenze.
 
 ## 🙌 Autore
 
-Creato da [Andrea Roncoroni]  
-Con supporto e ottimizzazione da ChatGPT-4o
+Creato da [roncoa@gmail.com] 
