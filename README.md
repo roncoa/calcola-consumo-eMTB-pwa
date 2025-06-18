@@ -51,7 +51,7 @@ Funziona **offline** e può essere **installata su PC, Android e iOS**.
 ## ⚠️ Requisiti
 
 - **JavaScript abilitato**
-- Chart.js ([chart.umd.min.js](https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js)) salvato localmente
+- Chart.js ([chart.umd.min.js](https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js)) compreso nel pacchetto
 
 ---
 
