@@ -1,6 +1,6 @@
 # 🔋 Calcola consumo eBike
 
-Questa Progressive Web App (PWA) consente di stimare il consumo di una e-bike (eMTB) in base a un tracciato GPX o a distanza/dislivello inseriti manualmente.  
+Questa Progressive Web App (PWA) consente di stimare il consumo di una eMTB in base a un tracciato GPX o a distanza/dislivello inseriti manualmente.  
 Funziona **offline** e può essere **installata su PC, Android e iOS**.
 
 ![screenshot](icon.png)
