@@ -7,7 +7,7 @@
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#27ae60" />
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="eMTB Consumo">
+  <meta name="apple-mobile-web-app-title" content="Calcola consumo eMTB">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="icon" href="icon.png" />
   <script src="chart.umd.min.js"></script>
@@ -153,7 +153,7 @@
   <script>
     let chart;
     let profiles = {};
-	const elevThresholdDEFAULT = 1;
+	const elevThresholdDEFAULT =   1;
 	const smoothingWindowDEFAULT = 5;
 	const profilesDEFAULT = {
         Eco:   [0.3, 30],
@@ -479,7 +479,7 @@ function drawChart(elev, coords) {
 function shareResults() {
   if (navigator.share) {
     navigator.share({
-      title: 'Consumo eMTB',
+      title: 'Calcola consumo eMTB',
       text: document.getElementById("outputText").innerText,
       url: window.location.href
     }).catch(err => console.warn('❌ Share fallito', err));
