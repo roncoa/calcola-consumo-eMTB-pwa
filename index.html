@@ -156,10 +156,10 @@
 	const elevThresholdDEFAULT = 1;
 	const smoothingWindowDEFAULT = 5;
 	const profilesDEFAULT = {
-        Eco: [0.3, 30],
-        Tour: [0.5, 40],
-        eMTB: [0.7, 50],
-        Turbo: [1, 65]
+        Eco:   [0.3, 30],
+        Tour:  [0.5, 40],
+        eMTB:  [0.7, 50],
+        Turbo: [1,   65]
       };
 	  
 
@@ -170,10 +170,17 @@
 
 
 function analyze() {
-document.getElementById("outputText").innerHTML = "⏳ Analisi in corso...";
-document.getElementById("results").style.display = "block";
+  document.getElementById("outputText").innerHTML = "⏳ Analisi in corso...";
+  document.getElementById("results").style.display = "block";
+  document.getElementById("outputText").style.display = "block";
   const profileName = document.getElementById("assist").value;
-  if (!profiles[profileName]) return alert("⚠️ Nessun profilo valido selezionato.");
+  if (!profiles[profileName]) {
+  document.getElementById("outputText").style.display = "none";
+  document.getElementById("results").style.display = "none";
+  return alert("⚠️ Nessun profilo valido selezionato.");}
+
+
+  
 
   closeAccordion();
   saveParams();
@@ -212,7 +219,10 @@ document.getElementById("results").style.display = "block";
 
 
   const file = document.getElementById("gpxInput").files[0];
-  if (!file) return alert("📂 Seleziona un file GPX.");
+  if (!file) {
+  document.getElementById("outputText").style.display = "none";
+  document.getElementById("results").style.display = "none";
+  return alert("📂 Seleziona un file GPX.");}
 
   const elevThreshold = parseFloat(document.getElementById("elevThreshold").value) || elevThresholdDEFAULT;
   const smoothingWindow = parseInt(document.getElementById("smoothingWindow").value) || smoothingWindowDEFAULT;
