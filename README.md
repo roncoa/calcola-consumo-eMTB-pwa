@@ -45,6 +45,7 @@ Funziona **offline** e può essere **installata su PC, Android e iOS**.
 - Puoi modificare i profili di assistenza direttamente dall'interfaccia
 - Le impostazioni vengono salvate nel `localStorage` del browser
 - Funziona anche con file `.gpx` molto lunghi (ottimizzazione in tempo reale)
+- Puoi modificare i parametri del filtro per il calcolo della pendenza da file `.gpx`
 
 ---
 
